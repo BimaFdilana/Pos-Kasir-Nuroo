@@ -3,7 +3,12 @@
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DiningTableController;
+use App\Http\Controllers\Web\IngredientController;
+use App\Http\Controllers\Web\IngredientMovementController;
 use App\Http\Controllers\Web\KdsController;
+use App\Http\Controllers\Web\OpnameController;
+use App\Http\Controllers\Web\RecipeController;
+use App\Http\Controllers\Web\WarehouseController;
 use App\Http\Controllers\Web\QrGuestController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\OutletController;
@@ -78,6 +83,31 @@ Route::middleware('auth')->group(function () {
     Route::put('/dining-tables/{table}', [DiningTableController::class, 'update'])->name('dining-tables.update')
         ->middleware('role:owner,manager');
     Route::post('/dining-tables/{table}/regenerate', [DiningTableController::class, 'regenerate'])->name('dining-tables.regenerate')
+        ->middleware('role:owner,manager');
+
+    Route::get('/inventory/ingredients', [IngredientController::class, 'index'])->name('inventory.ingredients')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/ingredients', [IngredientController::class, 'store'])->name('inventory.ingredients.store')
+        ->middleware('role:owner,manager');
+    Route::get('/inventory/warehouses', [WarehouseController::class, 'index'])->name('inventory.warehouses')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/warehouses', [WarehouseController::class, 'store'])->name('inventory.warehouses.store')
+        ->middleware('role:owner,manager');
+    Route::get('/inventory/recipes', [RecipeController::class, 'index'])->name('inventory.recipes')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/recipes', [RecipeController::class, 'store'])->name('inventory.recipes.store')
+        ->middleware('role:owner,manager');
+    Route::delete('/inventory/recipes/{recipe}', [RecipeController::class, 'destroy'])->name('inventory.recipes.destroy')
+        ->middleware('role:owner,manager');
+    Route::get('/inventory/movements', [IngredientMovementController::class, 'index'])->name('inventory.movements')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/movements', [IngredientMovementController::class, 'store'])->name('inventory.movements.store')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/transfers', [IngredientMovementController::class, 'transfer'])->name('inventory.transfers.store')
+        ->middleware('role:owner,manager');
+    Route::get('/inventory/opnames', [OpnameController::class, 'index'])->name('inventory.opnames')
+        ->middleware('role:owner,manager');
+    Route::post('/inventory/opnames', [OpnameController::class, 'store'])->name('inventory.opnames.store')
         ->middleware('role:owner,manager');
 
     Route::get('/kds', [KdsController::class, 'index'])->name('kds.index');

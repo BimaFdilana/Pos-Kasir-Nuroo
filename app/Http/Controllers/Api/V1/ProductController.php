@@ -28,6 +28,8 @@ class ProductController extends Controller
                     'name' => $v->name,
                     'sku' => $v->sku,
                     'price' => $v->price,
+                    // Computed HPP per serving; null when the variant has no recipe.
+                    'hpp_per_serving' => app(\App\Services\InventoryService::class)->hppForVariant($v),
                 ]),
             ]);
 

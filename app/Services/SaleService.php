@@ -131,6 +131,11 @@ class SaleService
                 ]);
             }
 
+            // Recipe consumption: variants with a recipe decrement their
+            // ingredients from the outlet's warehouse, inside this same
+            // transaction. Variants without a recipe are untouched.
+            app(InventoryService::class)->decrementForSale($user, $outlet, $sale, $preparedItems);
+
             foreach ($payments['payments'] as $payment) {
                 $sale->payments()->create($payment);
             }
@@ -247,6 +252,9 @@ class SaleService
                     ]);
                 }
             }
+
+            // Restore recipe ingredients consumed by this sale, if any.
+            app(InventoryService::class)->restoreForSale($supervisor, $sale);
 
             $sale->update([
                 'status' => $action === 'void' ? 'voided' : 'refunded',

@@ -33,6 +33,11 @@ button{padding:8px 14px;cursor:pointer}
 <a href="{{ route('kds.index') }}">KDS</a>
 @if(in_array(auth()->user()->role, ['owner', 'manager'], true))
 <a href="{{ route('stock-adjustments.index') }}">Penyesuaian Stok</a>
+<a href="{{ route('inventory.ingredients') }}">Bahan Baku</a>
+<a href="{{ route('inventory.warehouses') }}">Gudang</a>
+<a href="{{ route('inventory.recipes') }}">Resep &amp; HPP</a>
+<a href="{{ route('inventory.movements') }}">Mutasi Bahan</a>
+<a href="{{ route('inventory.opnames') }}">Opname</a>
 @endif
 @endif
 </nav>

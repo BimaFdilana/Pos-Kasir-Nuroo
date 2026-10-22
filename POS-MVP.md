@@ -105,3 +105,39 @@ Tests:
   manual). Yang TIDAK dibangun di langkah ini: inventori/resep/HPP/
   opname, CRM/loyalti, akuntansi, Consumer App, gateway/QRIS/e-wallet/
   ECR, marketplace, dan payroll.
+
+## Inventori lengkap (V2 langkah 2)
+
+- Bahan baku: nama, satuan (gram/ml/pcs), harga per satuan (Rp integer),
+  stok minimum opsional. Gudang: per tenant, bisa terikat ke satu outlet,
+  satu gudang bisa ditandai default.
+- Resep: tiap varian produk bisa punya beberapa baris bahan dengan jumlah
+  per porsi. HPP per porsi = jumlah (jumlah bahan x harga per satuan),
+  dihitung saat dibaca (di endpoint resep dan produk) — HPP TIDAK pernah
+  menimpa harga jual.
+- Mutasi bahan: pembelian (masuk), penyesuaian (boleh negatif), transfer
+  antar gudang (pasangan keluar/masuk dengan transfer_group yang sama).
+  Setiap mutasi wajib alasan dan tercatat pelakunya; mutasi yang membuat
+  stok negatif ditolak 422.
+- Opname: catat jumlah hasil hitung per gudang/bahan; sistem menyimpan
+  jumlah sistem, jumlah hitung, dan selisihnya, lalu menerapkan selisih
+  sebagai mutasi opname sehingga stok menjadi jumlah hitung.
+- Penjualan: bila varian yang dijual punya resep, bahan dikonsumsi dari
+  gudang outlet itu (atau gudang default tenant, lalu gudang pertama)
+  dalam transaksi penjualan yang sama. Kebutuhan diagregasi per bahan
+  dan divalidasi dulu — satu bahan kurang membuat seluruh penjualan gagal
+  422 tanpa mengurangi apa pun. Varian tanpa resep tetap terjual persis
+  seperti sebelumnya. Void/refund mengembalikan bahan yang dikonsumsi.
+- Endpoint (semua Sanctum, supervisor-only, tenant-scoped):
+  `GET/POST/PUT/DELETE /api/v1/ingredients`,
+  `GET/POST/PUT/DELETE /api/v1/warehouses`,
+  `GET/POST/PUT/DELETE /api/v1/recipes` (GET butuh product_variant_id),
+  `GET/POST /api/v1/ingredient-movements`,
+  `POST /api/v1/ingredient-transfers`, `GET/POST /api/v1/opnames`.
+- Halaman web (owner/manager): Bahan Baku, Gudang, Resep & HPP, Mutasi
+  Bahan, Opname.
+- Batasan: stok bahan tidak dilacak per batch/kedaluwarsa; tidak ada
+  peringatan stok menipis otomatis di luar flag low_stock di API bahan;
+  bila gudang dihapus saat penjualan dibatalkan dan gudang tidak lagi
+  ada, pengembalian bahan dilewati (kasus langka, didokumentasikan di
+  InventoryService).
