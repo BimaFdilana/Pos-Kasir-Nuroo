@@ -28,7 +28,10 @@ class SaleController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_variant_id' => ['required', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'payments' => ['required', 'array', 'min:1'],
+            // Payments may be empty only for a sale fully covered by
+            // points/voucher discount (total 0); the service still
+            // rejects a non-zero total with no payments.
+            'payments' => ['nullable', 'array'],
             'payments.*.method' => ['required', 'in:cash,edc'],
             'payments.*.amount' => ['required', 'integer', 'min:1'],
             'payments.*.tendered' => ['nullable', 'integer', 'min:0'],
@@ -38,6 +41,9 @@ class SaleController extends Controller
             'discount_total' => ['nullable', 'integer', 'min:0'],
             'tax_total' => ['nullable', 'integer', 'min:0'],
             'notes' => ['nullable', 'string'],
+            'member_id' => ['nullable', 'exists:members,id'],
+            'redeem_points' => ['nullable', 'integer', 'min:0'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         // Idempotency check first, so the status code is reliable:

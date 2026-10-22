@@ -141,3 +141,39 @@ Tests:
   bila gudang dihapus saat penjualan dibatalkan dan gudang tidak lagi
   ada, pengembalian bahan dilewati (kasus langka, didokumentasikan di
   InventoryService).
+
+## CRM & akuntansi inti (V2 langkah 3, terakhir V2)
+- Member: nama, HP unik per tenant, email/tanggal lahir/catatan opsional.
+  CRUD API untuk semua peran tenant; saldo poin selalu jumlah ledger.
+- Poin loyalitas: 1 poin per Rp 10.000 total akhir penjualan (pembagian
+  bulat, tanpa pecahan); nilai tukar Rp 100 per poin. Tukar melebihi
+  saldo ditolak 422; nilai tukar dibatasi sisa setelah diskon manual
+  dan voucher, jadi total penjualan tidak pernah negatif. Penjualan
+  yang lunas penuh oleh poin totalnya Rp 0 dan tidak butuh baris
+  pembayaran. Void/refund membalik poin yang didapat dan mengembalikan
+  poin yang ditukar.
+- Voucher/kampanye: satu voucher per penjualan, persen (maks 100) atau
+  nominal Rp, jendela tanggal, batas pemakaian, flag aktif. Pemakaian
+  dihitung dalam transaksi penjualan yang sama; void/refund melepas
+  pemakaian sehingga voucher bisa dipakai lagi.
+- Akuntansi inti: bagan akun 1101 Kas, 1102 Piutang EDC, 1301 Persediaan
+  Bahan Baku, 4101 Pendapatan Penjualan, 4201 Diskon Penjualan, 5101 HPP.
+  Satu jurnal per penjualan yang lunas, seimbang: debit Kas + Piutang
+  EDC + Diskon + HPP = kredit Pendapatan (subtotal + pajak, bila ada)
+  + Persediaan Bahan (HPP). Produk tanpa resep HPP-nya 0. Void/refund
+  menulis jurnal pembalik, bukan menghapus jurnal lama. Laba kotor =
+  Pendapatan − Diskon − HPP, dihitung bersih dari jurnal (pembatalan
+  ikut mengurangi total).
+- Endpoint (Sanctum, tenant-scoped): member CRUD
+  `GET/POST/PUT/DELETE /api/v1/members` (semua peran tenant);
+  voucher `GET/POST/PUT/DELETE /api/v1/vouchers` (supervisor-only);
+  `GET /api/v1/accounting/accounts`, `GET /api/v1/accounting/journals`
+  (filter outlet/from/to), `GET /api/v1/accounting/profit-loss`
+  (supervisor-only). Penjualan API menerima `member_id`,
+  `redeem_points`, dan `voucher_code` opsional.
+- Halaman web (owner/manager): Member, Voucher, Jurnal, Laba Rugi.
+- Batasan: bukan akuntansi double-entry penuh dan tanpa laporan pajak;
+  pajak penjualan (bila diisi) dikreditkan ke Pendapatan, bukan akun
+  pajak terpisah; tidak ada gateway/QRIS/e-wallet/ECR, marketplace,
+  payroll, atau Consumer App di langkah ini. Pembayaran tetap cash
+  dan EDC manual; nomor kartu tidak pernah diminta/disimpan.

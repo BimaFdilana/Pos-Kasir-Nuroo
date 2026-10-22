@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Web\AccountingController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
+use App\Http\Controllers\Web\MemberController;
+use App\Http\Controllers\Web\VoucherController;
 use App\Http\Controllers\Web\DiningTableController;
 use App\Http\Controllers\Web\IngredientController;
 use App\Http\Controllers\Web\IngredientMovementController;
@@ -108,6 +111,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventory/opnames', [OpnameController::class, 'index'])->name('inventory.opnames')
         ->middleware('role:owner,manager');
     Route::post('/inventory/opnames', [OpnameController::class, 'store'])->name('inventory.opnames.store')
+        ->middleware('role:owner,manager');
+
+    Route::get('/crm/members', [MemberController::class, 'index'])->name('crm.members')
+        ->middleware('role:owner,manager');
+    Route::post('/crm/members', [MemberController::class, 'store'])->name('crm.members.store')
+        ->middleware('role:owner,manager');
+    Route::get('/crm/vouchers', [VoucherController::class, 'index'])->name('crm.vouchers')
+        ->middleware('role:owner,manager');
+    Route::post('/crm/vouchers', [VoucherController::class, 'store'])->name('crm.vouchers.store')
+        ->middleware('role:owner,manager');
+    Route::get('/accounting/journals', [AccountingController::class, 'journals'])->name('accounting.journals')
+        ->middleware('role:owner,manager');
+    Route::get('/accounting/profit-loss', [AccountingController::class, 'profitLoss'])->name('accounting.profit-loss')
         ->middleware('role:owner,manager');
 
     Route::get('/kds', [KdsController::class, 'index'])->name('kds.index');

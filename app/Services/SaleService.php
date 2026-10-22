@@ -22,7 +22,7 @@ use Illuminate\Validation\ValidationException;
 class SaleService
 {
     /**
-     * @param  array{outlet_id:int, items:array, payments:array, client_reference?:string|null, discount_total?:int, tax_total?:int, notes?:string|null}  $data
+     * @param  array{outlet_id:int, items:array, payments:array, client_reference?:string|null, discount_total?:int, tax_total?:int, notes?:string|null, member_id?:int|null, redeem_points?:int, voucher_code?:string|null}  $data
      */
     public function createSale(User $user, array $data): Sale
     {
@@ -85,16 +85,45 @@ class SaleService
                 ];
             }
 
-            $discount = (int) ($data['discount_total'] ?? 0);
+            $manualDiscount = (int) ($data['discount_total'] ?? 0);
             $tax = (int) ($data['tax_total'] ?? 0);
-            $total = max(0, $subtotal - $discount + $tax);
 
-            $payments = $this->preparePayments($data['payments'], $total);
+            // CRM attachments, validated before any row is written, in
+            // this same transaction. discount_total stored on the sale
+            // is the sum of manual + voucher + points discounts.
+            $crm = app(CrmService::class);
+            $member = $crm->memberFor($user, $data['member_id'] ?? null);
+            if (! $member && ! empty($data['redeem_points'])) {
+                throw ValidationException::withMessages(['redeem_points' => 'A member is required to redeem points.']);
+            }
+            [$voucher, $voucherDiscount] = $crm->voucherFor($user, $data['voucher_code'] ?? null, $subtotal);
+            $remaining = max(0, $subtotal - $manualDiscount - $voucherDiscount);
+            $redemption = $member
+                ? $crm->redemptionFor($member, (int) ($data['redeem_points'] ?? 0), $remaining)
+                : ['points' => 0, 'value' => 0];
+            $discount = $manualDiscount + $voucherDiscount + $redemption['value'];
+            $total = max(0, $subtotal - $discount + $tax);
+            $pointsEarned = $crm->pointsForTotal($total);
+
+            // COGS from recipes, for the journal entry. Variants without
+            // a recipe contribute 0; the selling price is untouched.
+            $inventory = app(InventoryService::class);
+            $cogs = 0;
+            foreach ($preparedItems as $row) {
+                $hpp = $inventory->hppForVariant($row['variant']);
+                if ($hpp !== null) {
+                    $cogs += $hpp * $row['quantity'];
+                }
+            }
+
+            $payments = $this->preparePayments($data['payments'] ?? [], $total);
 
             $sale = Sale::create([
                 'tenant_id' => $user->tenant_id,
                 'outlet_id' => $outlet->id,
                 'user_id' => $user->id,
+                'member_id' => $member?->id,
+                'voucher_id' => $voucher?->id,
                 'client_reference' => $data['client_reference'] ?? null,
                 'status' => 'completed',
                 'subtotal' => $subtotal,
@@ -104,6 +133,11 @@ class SaleService
                 'paid_total' => $total,
                 'change_total' => $payments['change_total'],
                 'notes' => $data['notes'] ?? null,
+                'points_redeemed' => $redemption['points'],
+                'points_value' => $redemption['value'],
+                'points_earned' => $pointsEarned,
+                'voucher_discount' => $voucherDiscount,
+                'cogs_total' => $cogs,
             ]);
             $sale->update(['sale_number' => 'SLS-'.$outlet->id.'-'.str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT)]);
 
@@ -140,6 +174,11 @@ class SaleService
                 $sale->payments()->create($payment);
             }
 
+            // Loyalty ledger + voucher usage + journal entry, all in
+            // this same transaction as the sale itself.
+            $crm->recordForSale($user, $sale, $member, $voucher);
+            app(AccountingService::class)->recordForSale($sale->fresh(['payments']));
+
             return $sale->fresh(['items', 'payments']);
         });
     }
@@ -149,6 +188,12 @@ class SaleService
      */
     protected function preparePayments(array $payments, int $total): array
     {
+        // A sale fully covered by points/voucher discount has total 0
+        // and needs no payment row at all.
+        if ($total === 0 && empty($payments)) {
+            return ['payments' => [], 'change_total' => 0];
+        }
+
         if (empty($payments)) {
             throw ValidationException::withMessages(['payments' => 'At least one payment is required.']);
         }
@@ -255,6 +300,11 @@ class SaleService
 
             // Restore recipe ingredients consumed by this sale, if any.
             app(InventoryService::class)->restoreForSale($supervisor, $sale);
+
+            // Reverse loyalty points, release the voucher, and write the
+            // reversing journal entry — same transaction as the void.
+            app(CrmService::class)->reverseForSale($supervisor, $sale);
+            app(AccountingService::class)->reverseForSale($supervisor, $sale);
 
             $sale->update([
                 'status' => $action === 'void' ? 'voided' : 'refunded',

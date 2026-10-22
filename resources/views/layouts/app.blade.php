@@ -38,6 +38,10 @@ button{padding:8px 14px;cursor:pointer}
 <a href="{{ route('inventory.recipes') }}">Resep &amp; HPP</a>
 <a href="{{ route('inventory.movements') }}">Mutasi Bahan</a>
 <a href="{{ route('inventory.opnames') }}">Opname</a>
+<a href="{{ route('crm.members') }}">Member</a>
+<a href="{{ route('crm.vouchers') }}">Voucher</a>
+<a href="{{ route('accounting.journals') }}">Jurnal</a>
+<a href="{{ route('accounting.profit-loss') }}">Laba Rugi</a>
 @endif
 @endif
 </nav>

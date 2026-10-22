@@ -9,8 +9,11 @@ use App\Http\Controllers\Api\V1\RecipeController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use App\Http\Controllers\Api\V1\QrOrderController;
 use App\Http\Controllers\Api\V1\TableOrderController;
+use App\Http\Controllers\Api\V1\AccountingController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\MemberController;
 use App\Http\Controllers\Api\V1\OwnerSummaryController;
+use App\Http\Controllers\Api\V1\VoucherController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ShiftController;
@@ -64,5 +67,19 @@ Route::prefix('v1')->group(function () {
         Route::post('/ingredient-transfers', [IngredientMovementController::class, 'transfer']);
         Route::get('/opnames', [OpnameController::class, 'index']);
         Route::post('/opnames', [OpnameController::class, 'store']);
+        // CRM + core accounting (members: any tenant role; vouchers and
+        // accounting: supervisor-only, all tenant-scoped).
+        Route::get('/members', [MemberController::class, 'index']);
+        Route::get('/members/{member}', [MemberController::class, 'show']);
+        Route::post('/members', [MemberController::class, 'store']);
+        Route::put('/members/{member}', [MemberController::class, 'update']);
+        Route::delete('/members/{member}', [MemberController::class, 'destroy']);
+        Route::get('/vouchers', [VoucherController::class, 'index']);
+        Route::post('/vouchers', [VoucherController::class, 'store']);
+        Route::put('/vouchers/{voucher}', [VoucherController::class, 'update']);
+        Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy']);
+        Route::get('/accounting/accounts', [AccountingController::class, 'accounts']);
+        Route::get('/accounting/journals', [AccountingController::class, 'journals']);
+        Route::get('/accounting/profit-loss', [AccountingController::class, 'profitLoss']);
     });
 });
