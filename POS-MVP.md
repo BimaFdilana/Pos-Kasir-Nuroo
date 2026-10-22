@@ -61,3 +61,47 @@ Tests:
   the cancelled sale); the sale row itself keeps its historical total.
 - This is a development SQLite setup. Production needs PostgreSQL,
   backups, HTTPS, and a proper deployment pipeline.
+
+## V2 langkah 1 — Meja, KDS, QR order per meja (belum commit/push)
+
+- Meja: `dining_tables` (tenant + outlet, nama, status free/occupied,
+  is_active, `qr_code` acak 32 karakter yang unik — BUKAN nomor meja
+  sehingga tidak bisa ditebak). API owner/manager: list/buat/update
+  meja per outlet, nonaktifkan, dan regenerasi kode QR. Halaman web
+  Meja juga tersedia (owner/manager untuk buat/edit/regenerasi).
+- Alur QR untuk pelanggan (tanpa login, tanpa install aplikasi):
+  1. Owner/manager membuat meja, lalu mencetak/menempel QR untuk URL
+     halaman tamu `/qr/{kode}` di meja tersebut (halaman ini memakai
+     API yang sama di bawahnya).
+  2. Pelanggan memindai QR dengan kamera HP, memilih menu, dan
+     mengirim pesanan — nama dan nomor HP boleh kosong (pesan tamu).
+  3. Pesanan masuk sebagai tagihan terbuka untuk meja itu (status
+     `new`), meja menjadi `occupied`, dan order terlihat di KDS.
+  4. KDS (halaman web `/kds`, untuk owner/manager/kasir) menampilkan
+     order terbuka per outlet dikelompokkan per status, dengan tombol
+     maju status (`new -> preparing -> ready -> served`) dan batal.
+  5. Pembayaran TETAP di kasir dengan cash / EDC manual: dari KDS
+     "Bayar di Kasir" membuka form konversi yang memakai SaleService
+     yang sama dengan penjualan biasa (validasi stok dan pembayaran
+     yang sama). Setelah lunas, order berstatus `paid`, tertaut ke
+     nomor penjualan, dan meja kembali `free` bila tidak ada lagi
+     order terbuka untuk meja itu.
+- Endpoint: `GET /api/v1/qr/{code}` (outlet, meja, produk aktif),
+  `POST /api/v1/qr/{code}/orders` (publik), `GET /api/v1/tables`,
+  `POST /api/v1/tables`, `PUT /api/v1/tables/{id}`,
+  `POST /api/v1/tables/{id}/regenerate`, `GET /api/v1/table-orders`
+  (filter outlet/status), `POST /api/v1/table-orders/{id}/status`,
+  `POST /api/v1/table-orders/{id}/convert` (Sanctum, tenant-scoped).
+- Batasan yang perlu diketahui: stok TIDAK divalidasi saat order QR
+  dibuat, melainkan saat konversi ke penjualan — bila stok habis di
+  tengah jalan, konversi gagal 422 dan order tetap terbuka. Harga
+  penjualan dihitung dari harga varian saat konversi, bukan dari
+  snapshot harga saat order (bila harga berubah, total pembayaran
+  harus sama dengan total penjualan yang baru). Konversi yang diulang
+  mengembalikan penjualan yang sama (idempotency lewat
+  `client_reference = qr-order-{id}`), tidak menggandakan stok.
+  Halaman tamu QR masih sederhana (tanpa foto menu, tanpa struk
+  digital, tanpa notifikasi real-time ke KDS — KDS perlu refresh
+  manual). Yang TIDAK dibangun di langkah ini: inventori/resep/HPP/
+  opname, CRM/loyalti, akuntansi, Consumer App, gateway/QRIS/e-wallet/
+  ECR, marketplace, dan payroll.

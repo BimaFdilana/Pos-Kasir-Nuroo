@@ -29,6 +29,8 @@ button{padding:8px 14px;cursor:pointer}
 <a href="{{ route('outlets.index') }}">Outlet</a>
 <a href="{{ route('sales.index') }}">Penjualan</a>
 <a href="{{ route('sales.create') }}">Kasir</a>
+<a href="{{ route('dining-tables.index') }}">Meja</a>
+<a href="{{ route('kds.index') }}">KDS</a>
 @if(in_array(auth()->user()->role, ['owner', 'manager'], true))
 <a href="{{ route('stock-adjustments.index') }}">Penyesuaian Stok</a>
 @endif

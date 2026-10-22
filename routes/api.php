@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\DiningTableController;
+use App\Http\Controllers\Api\V1\QrOrderController;
+use App\Http\Controllers\Api\V1\TableOrderController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\OwnerSummaryController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -11,6 +14,10 @@ use Illuminate\Support\Facades\Route;
 // API skeleton for the future mobile cashier. MVP payments only: cash, edc.
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+
+    // QR guest ordering: public, no login, no app install.
+    Route::get('/qr/{code}', [QrOrderController::class, 'show']);
+    Route::post('/qr/{code}/orders', [QrOrderController::class, 'store']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -26,5 +33,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/shifts', [ShiftController::class, 'index']);
         Route::post('/shifts', [ShiftController::class, 'store']);
         Route::get('/owner/summary', [OwnerSummaryController::class, 'show']);
+        Route::get('/tables', [DiningTableController::class, 'index']);
+        Route::post('/tables', [DiningTableController::class, 'store']);
+        Route::put('/tables/{table}', [DiningTableController::class, 'update']);
+        Route::post('/tables/{table}/regenerate', [DiningTableController::class, 'regenerate']);
+        Route::get('/table-orders', [TableOrderController::class, 'index']);
+        Route::post('/table-orders/{order}/status', [TableOrderController::class, 'updateStatus']);
+        Route::post('/table-orders/{order}/convert', [TableOrderController::class, 'convert']);
     });
 });

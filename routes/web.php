@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
+use App\Http\Controllers\Web\DiningTableController;
+use App\Http\Controllers\Web\KdsController;
+use App\Http\Controllers\Web\QrGuestController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\OutletController;
 use App\Http\Controllers\Web\ProductController;
@@ -10,6 +13,9 @@ use App\Http\Controllers\Web\StockAdjustmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
+
+// Public guest ordering page reached by scanning a table QR code.
+Route::get('/qr/{code}', [QrGuestController::class, 'show'])->name('qr.guest');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -63,4 +69,19 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:owner,manager');
     Route::post('/sales/{sale}/refund', [SaleController::class, 'refund'])->name('sales.refund')
         ->middleware('role:owner,manager');
+
+    Route::get('/dining-tables', [DiningTableController::class, 'index'])->name('dining-tables.index');
+    Route::post('/dining-tables', [DiningTableController::class, 'store'])->name('dining-tables.store')
+        ->middleware('role:owner,manager');
+    Route::get('/dining-tables/{table}/edit', [DiningTableController::class, 'edit'])->name('dining-tables.edit')
+        ->middleware('role:owner,manager');
+    Route::put('/dining-tables/{table}', [DiningTableController::class, 'update'])->name('dining-tables.update')
+        ->middleware('role:owner,manager');
+    Route::post('/dining-tables/{table}/regenerate', [DiningTableController::class, 'regenerate'])->name('dining-tables.regenerate')
+        ->middleware('role:owner,manager');
+
+    Route::get('/kds', [KdsController::class, 'index'])->name('kds.index');
+    Route::post('/kds/{order}/status', [KdsController::class, 'updateStatus'])->name('kds.status');
+    Route::get('/kds/{order}/convert', [KdsController::class, 'convertForm'])->name('kds.convert.form');
+    Route::post('/kds/{order}/convert', [KdsController::class, 'convert'])->name('kds.convert');
 });
